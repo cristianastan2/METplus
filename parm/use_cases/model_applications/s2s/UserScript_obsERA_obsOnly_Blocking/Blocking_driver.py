@@ -65,28 +65,44 @@ def main():
 
 
     # Calculate Central Blocking Latitude
+    # Check to see if it is listed in the steps for the observations
     if ("CBL" in steps_list_obs):
         print('Computing Obs CBLs')
-        # Read in the list of CBL files
+        # Get the number of years (seasons) specified for the CBL calculation
+        # This is needed to determine the size of the data array for the CBL and IBL calculations
+        # The number of years in the CBL calculation can be different from the number of years in the IBL/blocking calculation
         cbl_nseasons = int(os.environ['CBL_NUM_SEASONS'])
+        # Read in the list of CBL files to use for ethe cbl calculation
         with open(obs_cbl_filetxt) as ocl:
             obs_infiles = ocl.read().splitlines()
         if (obs_infiles[0] == 'file_list'):
             obs_infiles = obs_infiles[1:]
+        # Check to see that the CBL infiles contain the same number of days for all years
+        # If not, exit with an exception
         if len(obs_infiles) != (cbl_nseasons*dseasons):
             raise Exception('Invalid Obs data; each year must contain the same date range to calculate seasonal averages.')
+        # Run the CBL calculation on the observations
         cbls_obs,lats_obs,lons_obs,mhweight_obs,cbl_time_obs = steps_obs.run_CBL(obs_infiles,cbl_nseasons,dseasons)
 
+    # Check to see if CBL is listed in the forecast steps
+    # If the flag to use CBL climatology from the observations is false, calculate CBLs for forecast
     if ("CBL" in steps_list_fcst) and (use_cbl_obs == 'false'):
         # Add in step to use obs for CBLS
         print('Computing Forecast CBLs')
+        # Get the number of years (seasons) specified for the CBL calculation
+        # This is needed to determine the size of the data array for the CBL and IBL calculations
+        # The number of years in the CBL calculation can be different from the number of years in the IBL/blocking calculation
         cbl_nseasons = int(os.environ['CBL_NUM_SEASONS'])
+        # Read in the list of CBL files to use for ethe cbl calculation
         with open(fcst_cbl_filetxt) as fcl:
             fcst_infiles = fcl.read().splitlines()
         if (fcst_infiles[0] == 'file_list'):
             fcst_infiles = fcst_infiles[1:]
+        # Check to see that the CBL infiles contain the same number of days for all years
+        # If not, exit with an exception
         if len(fcst_infiles) != (cbl_nseasons*dseasons):
             raise Exception('Invalid Fcst data; each year must contain the same date range to calculate seasonal averages.')
+        # Run the CBL calculation on the forecast
         cbls_fcst,lats_fcst,lons_fcst,mhweight_fcst,cbl_time_fcst = steps_fcst.run_CBL(fcst_infiles,cbl_nseasons,dseasons)
     elif ("CBL" in steps_list_fcst) and (use_cbl_obs == 'true'):
         if not ("CBL" in steps_list_obs):
