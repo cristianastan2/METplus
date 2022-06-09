@@ -67,20 +67,20 @@ def main():
     ######################################################################
     # Calculate Central Blocking Latitude
     ######################################################################
-    # Check to see if it is listed in the steps for the observations
+    # Check to see if CBL is listed in the observation steps
     if ("CBL" in steps_list_obs):
         print('Computing Obs CBLs')
         # Get the number of years (seasons) specified for the CBL calculation
         # This is needed to determine the size of the data array for the CBL and IBL calculations
-        # The number of years in the CBL calculation can be different from the number of years in the IBL/blocking calculation
+        # The number of years in the CBL calculation can be different from the number of years in the IBL calculation
         cbl_nseasons = int(os.environ['CBL_NUM_SEASONS'])
-        # Read in the list of CBL files to use for ethe cbl calculation
+        # Read in the list of CBL files to use for the observation CBL calculation
         with open(obs_cbl_filetxt) as ocl:
             obs_infiles = ocl.read().splitlines()
         if (obs_infiles[0] == 'file_list'):
             obs_infiles = obs_infiles[1:]
         # Check to see that the CBL infiles contain the same number of days for all years
-        # If not, exit with an exception
+        # If not, give an error
         if len(obs_infiles) != (cbl_nseasons*dseasons):
             raise Exception('Invalid Obs data; each year must contain the same date range to calculate seasonal averages.')
         # Run the CBL calculation on the observations
@@ -93,19 +93,20 @@ def main():
         print('Computing Forecast CBLs')
         # Get the number of years (seasons) specified for the CBL calculation
         # This is needed to determine the size of the data array for the CBL and IBL calculations
-        # The number of years in the CBL calculation can be different from the number of years in the IBL/blocking calculation
+        # The number of years in the CBL calculation can be different from the number of years in the IBL calculation
         cbl_nseasons = int(os.environ['CBL_NUM_SEASONS'])
-        # Read in the list of CBL files to use for ethe cbl calculation
+        # Read in the list of CBL files to use for the forecast CBL calculation
         with open(fcst_cbl_filetxt) as fcl:
             fcst_infiles = fcl.read().splitlines()
         if (fcst_infiles[0] == 'file_list'):
             fcst_infiles = fcst_infiles[1:]
         # Check to see that the CBL infiles contain the same number of days for all years
-        # If not, exit with an exception
+        # If not, give an error
         if len(fcst_infiles) != (cbl_nseasons*dseasons):
             raise Exception('Invalid Fcst data; each year must contain the same date range to calculate seasonal averages.')
         # Run the CBL calculation on the forecast
         cbls_fcst,lats_fcst,lons_fcst,mhweight_fcst,cbl_time_fcst = steps_fcst.run_CBL(fcst_infiles,cbl_nseasons,dseasons)
+        
     # If the flag to use the CBL climatology from the observations is true, then use the obs CBL data for the forecast CBL data
     elif ("CBL" in steps_list_fcst) and (use_cbl_obs == 'true'):
         # Check to be sure that the observed CBLs were already calculated (listed in the obs_steps)
@@ -122,20 +123,31 @@ def main():
     ######################################################################
     #Plot Central Blocking Latitude
     ######################################################################
+    # Check to see if PLOTCBL is in the observation steps
     if ("PLOTCBL" in steps_list_obs):
+        # CBLs need to be calculated before they can be plotted
+        # If the CBL step was not in the observation steps, give an error
         if not ("CBL" in steps_list_obs):
             raise Exception('Must run observed CBLs before plotting them.')
         print('Plotting Obs CBLs')
+        # Get the month string and plot output name
         cbl_plot_mthstr = os.environ['OBS_CBL_PLOT_MTHSTR']
         cbl_plot_outname = os.path.join(oplot_dir,os.environ.get('OBS_CBL_PLOT_OUTPUT_NAME','obs_cbl_avg'))
+        # Plot the observation CBLs
         create_cbl_plot(lons_obs, lats_obs, cbls_obs, mhweight_obs, cbl_plot_mthstr, cbl_plot_outname, 
             do_averaging=True)
+        
+    # Check to see if PLOTCBL is the forecast steps
     if ("PLOTCBL" in steps_list_fcst):
+        # CBLs need to be calculated before they can be plotted
+        # If the CBL step was not in the forecast steps, give an error
         if not ("CBL" in steps_list_fcst):
             raise Exception('Must run forecast CBLs before plotting them.')
         print('Plotting Forecast CBLs')
+        # Get the month string and plot output name
         cbl_plot_mthstr = os.environ['FCST_CBL_PLOT_MTHSTR']
         cbl_plot_outname = os.path.join(oplot_dir,os.environ.get('FCST_CBL_PLOT_OUTPUT_NAME','fcst_cbl_avg'))
+        # Plot the forecast CBLs
         create_cbl_plot(lons_fcst, lats_fcst, cbls_fcst, mhweight_fcst, cbl_plot_mthstr, cbl_plot_outname, 
             do_averaging=True)
 
@@ -143,33 +155,59 @@ def main():
     ######################################################################
     # Calculate Instantaneously Blocked Longitudes (IBLs)
     ######################################################################
+    # Check to see if IBL is listed in the observation steps
     if ("IBL" in steps_list_obs):
+        # Computing IBLs requires the CBL calculation so check to make sure it was in the observation steps
+        # If not, give an error
         if not ("CBL" in steps_list_obs):
             raise Exception('Must run observed CBLs before running IBLs.')
         print('Computing Obs IBLs')
+        # Get the number of years (seasons) specified for the IBL calculation
+        # This is needed to determine the size of the data array for the CBL and IBL calculations
+        # The number of years in the IBL calculation can be different from the number of years in the CBL calculation
         ibl_nseasons = int(os.environ['IBL_NUM_SEASONS'])
+        # Read in the list of IBL files to use for the observation IBL calculation
         with open(obs_ibl_filetxt) as oil:
             obs_infiles = oil.read().splitlines()
         if (obs_infiles[0] == 'file_list'):
             obs_infiles = obs_infiles[1:]
+        # Check to see that the CBL infiles contain the same number of days for all years
+        # If not, give an error
         if len(obs_infiles) != (ibl_nseasons*dseasons):
             raise Exception('Invalid Obs data; each year must contain the same date range to calculate seasonal averages.')
+        # Run the IBL calculation on the observation
         ibls_obs,ibl_time_obs = steps_obs.run_Calc_IBL(cbls_obs,obs_infiles,ibl_nseasons,dseasons)
         daynum_obs = np.arange(0,len(ibls_obs[0,:,0]),1)
+    
+    # Check to see if IBL is listed in the forecast steps
     if ("IBL" in steps_list_fcst):
+        # Computing IBLs requries the CBL calculation so check to make sure it was in the forecast steps
+        # If it was not, give an error
         if (not "CBL" in steps_list_fcst):
             raise Exception('Must run forecast CBLs or use observed CBLs before running IBLs.')
         print('Computing Forecast IBLs')
+        # Get the number of years (seasons) specified for the IBL calculation
+        # This is needed to determine the size of the data array for the CBL and IBL calculations
+        # The number of years in the IBL calculation can be different from the number of years in the CBL calculation
         ibl_nseasons = int(os.environ['IBL_NUM_SEASONS'])
+        # Read in the list of IBL files to use for the forecast IBL calculation
         with open(fcst_ibl_filetxt) as fil:
             fcst_infiles = fil.read().splitlines()
         if (fcst_infiles[0] == 'file_list'):
             fcst_infiles = fcst_infiles[1:]
+        # Check to see that the CBL infiles contain the same number of days for all years
+        # If not, give an error
         if len(fcst_infiles) != (ibl_nseasons*dseasons):
             raise Exception('Invalid Fcst data; each year must contain the same date range to calculate seasonal averages.')
+        # Run the IBL calculation on the forecast
         ibls_fcst,ibl_time_fcst = steps_fcst.run_Calc_IBL(cbls_fcst,fcst_infiles,ibl_nseasons,dseasons)
         daynum_fcst = np.arange(0,len(ibls_fcst[0,:,0]),1)
 
+        
+    ######################################################################
+    # Write out matched pair files for the IBLs
+    # if IBLs are calculated in both the obs and forecast
+    ######################################################################
     if ("IBL" in steps_list_obs) and ("IBL" in steps_list_fcst):
         # Print IBLs to output matched pair file
         i_mpr_outdir = os.path.join(mpr_dir,'IBL')
@@ -184,7 +222,7 @@ def main():
 
         
     ######################################################################
-    # Plot IBLS
+    # Plot IBLs
     ######################################################################
     if("PLOTIBL" in steps_list_obs) and not ("PLOTIBL" in steps_list_fcst):
         if not ("IBL" in steps_list_obs):
@@ -216,7 +254,7 @@ def main():
 
 
     ######################################################################
-    # Run GIBL
+    # Caluclate Group Instantaneously Blocked Longitudes (GIBLs)
     ######################################################################
     if ("GIBL" in steps_list_obs):
         if not ("IBL" in steps_list_obs):
@@ -232,7 +270,7 @@ def main():
 
 
     ######################################################################
-    # Calc Blocks
+    # Calculate Blocks
     ######################################################################
     if ("CALCBLOCKS" in steps_list_obs):
         if not ("GIBL" in steps_list_obs):
@@ -248,7 +286,8 @@ def main():
 
     
     ######################################################################
-    # Write out a Blocking MPR file if both obs and forecast blocking calculation performed
+    # Write out matched pair files for the Blocking
+    # if blocks are calculated in both the observation and forecast
     ######################################################################
     if ("CALCBLOCKS" in steps_list_obs) and ("CALCBLOCKS" in steps_list_fcst):
         b_mpr_outdir = os.path.join(mpr_dir,'Blocks')
