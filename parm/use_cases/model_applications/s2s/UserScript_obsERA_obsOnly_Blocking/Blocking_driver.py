@@ -6,6 +6,7 @@ import datetime
 import netCDF4
 import warnings
 
+# Load the blocking calculation from METcalcpy and plotting from METplotpy
 from metcalcpy.contributed.blocking_weather_regime.Blocking import BlockingCalculation
 from metcalcpy.contributed.blocking_weather_regime.Blocking_WeatherRegime_util import parse_steps, write_mpr_file
 from metplotpy.contributed.blocking_s2s import plot_blocking as pb
@@ -14,8 +15,10 @@ from metplotpy.contributed.blocking_s2s.CBL_plot import create_cbl_plot
 
 def main():
 
+    # Parse the steps listed in the .conf file to determine which ones to run
     steps_list_fcst,steps_list_obs = parse_steps()
 
+    # If there are no steps listed for the forecast or observation, give a warning that nothing will be run
     if not steps_list_obs and not steps_list_fcst:
         warnings.warn('No processing steps requested for either the model or observations,')
         warnings.warn(' nothing will be run')
@@ -25,11 +28,12 @@ def main():
     ######################################################################
     # Blocking Calculation and Plotting
     ######################################################################
-    # Set up the data
+    # Set up the class for the forecast and observations
     steps_fcst = BlockingCalculation('FCST')
     steps_obs = BlockingCalculation('OBS')
 
-    # Check to see if there is a plot directory
+    # Check to see if there is an output plot directory
+    # If an output plot directory does not exist, create it as {OUTPUT_BASE}/plots
     oplot_dir = os.environ.get('BLOCKING_PLOT_OUTPUT_DIR','')
     if not oplot_dir:
         obase = os.environ['SCRIPT_OUTPUT_BASE']
@@ -37,7 +41,8 @@ def main():
     if not os.path.exists(oplot_dir):
         os.makedirs(oplot_dir)
 
-    # Check to see if there is a mpr output directory
+    # Check to see if there is an output directory for the mpr files
+    # If an output mpr directory does not exist, create it as {OUTPUT_BASE}/mpr
     mpr_dir = os.environ.get('BLOCKING_MPR_OUTPUT_DIR','')
     if not mpr_dir:
         obase = os.environ['SCRIPT_OUTPUT_BASE']
@@ -46,10 +51,11 @@ def main():
     # Check to see if CBL's are used from an obs climatology
     use_cbl_obs = os.environ.get('USE_CBL_OBS','False').lower()
 
-    # Get the days per season
+    # Get the days per year (season) that should be present
+    # The script will fill missing days, but it needs to know how many to expect
     dseasons = int(os.environ['DAYS_PER_SEASON'])
 
-    # Grab the Anomaly (CBL) text files
+    # Grab the text files that contain listings of the anomaly data to use for the CBL calculation
     obs_cbl_filetxt = os.environ.get('METPLUS_FILELIST_OBS_CBL_INPUT','')
     fcst_cbl_filetxt = os.environ.get('METPLUS_FILELIST_FCST_CBL_INPUT','')
 
