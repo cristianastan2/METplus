@@ -26,7 +26,7 @@ def main():
 
 
     ######################################################################
-    # Blocking Calculation and Plotting
+    # Set up Blocking Calculation, plotting, and mpr output
     ######################################################################
     # Set up the class for the forecast and observations
     steps_fcst = BlockingCalculation('FCST')
@@ -64,7 +64,9 @@ def main():
     fcst_ibl_filetxt = os.environ.get('METPLUS_FILELIST_FCST_IBL_INPUT','')
 
 
+    ######################################################################
     # Calculate Central Blocking Latitude
+    ######################################################################
     # Check to see if it is listed in the steps for the observations
     if ("CBL" in steps_list_obs):
         print('Computing Obs CBLs')
@@ -104,16 +106,22 @@ def main():
             raise Exception('Invalid Fcst data; each year must contain the same date range to calculate seasonal averages.')
         # Run the CBL calculation on the forecast
         cbls_fcst,lats_fcst,lons_fcst,mhweight_fcst,cbl_time_fcst = steps_fcst.run_CBL(fcst_infiles,cbl_nseasons,dseasons)
+    # If the flag to use the CBL climatology from the observations is true, then use the obs CBL data for the forecast CBL data
     elif ("CBL" in steps_list_fcst) and (use_cbl_obs == 'true'):
+        # Check to be sure that the observed CBLs were already calculated (listed in the obs_steps)
         if not ("CBL" in steps_list_obs):
             raise Exception('Must run observed CBLs before using them as a forecast.')
+        # Use the obs CBL data for the forecast CBL data
         cbls_fcst = cbls_obs
         lats_fcst = lats_obs
         lons_fcst = lons_obs
         mhweight_fcst = mhweight_obs
         cbl_time_fcst = cbl_time_obs
 
+
+    ######################################################################
     #Plot Central Blocking Latitude
+    ######################################################################
     if ("PLOTCBL" in steps_list_obs):
         if not ("CBL" in steps_list_obs):
             raise Exception('Must run observed CBLs before plotting them.')
@@ -132,7 +140,9 @@ def main():
             do_averaging=True)
 
 
-    # Run IBL
+    ######################################################################
+    # Calculate Instantaneously Blocked Longitudes (IBLs)
+    ######################################################################
     if ("IBL" in steps_list_obs):
         if not ("CBL" in steps_list_obs):
             raise Exception('Must run observed CBLs before running IBLs.')
@@ -172,7 +182,10 @@ def main():
         write_mpr_file(ibls_obs,ibls_fcst,cbls_avg,lons_obs,ibl_time_obs,ibl_time_fcst,modname,
             'NA','IBLs','block','Z500','IBLs','block','Z500',maskname,'500',ibl_outfile_prefix)
 
+        
+    ######################################################################
     # Plot IBLS
+    ######################################################################
     if("PLOTIBL" in steps_list_obs) and not ("PLOTIBL" in steps_list_fcst):
         if not ("IBL" in steps_list_obs):
             raise Exception('Must run observed IBLs before plotting them.')
@@ -202,7 +215,9 @@ def main():
             label1=ibl_plot_label1,label2=ibl_plot_label2)
 
 
+    ######################################################################
     # Run GIBL
+    ######################################################################
     if ("GIBL" in steps_list_obs):
         if not ("IBL" in steps_list_obs):
             raise Exception('Must run observed IBLs before running GIBLs.')
@@ -216,7 +231,9 @@ def main():
         gibls_fcst = steps_fcst.run_Calc_GIBL(ibls_fcst,lons_fcst)
 
 
+    ######################################################################
     # Calc Blocks
+    ######################################################################
     if ("CALCBLOCKS" in steps_list_obs):
         if not ("GIBL" in steps_list_obs):
             raise Exception('Must run observed GIBLs before calculating blocks.')
@@ -229,7 +246,10 @@ def main():
         print('Computing Forecast Blocks')
         block_freq_fcst = steps_fcst.run_Calc_Blocks(ibls_fcst,gibls_fcst,lons_fcst,daynum_fcst)
 
+    
+    ######################################################################
     # Write out a Blocking MPR file if both obs and forecast blocking calculation performed
+    ######################################################################
     if ("CALCBLOCKS" in steps_list_obs) and ("CALCBLOCKS" in steps_list_fcst):
         b_mpr_outdir = os.path.join(mpr_dir,'Blocks')
         if not os.path.exists(b_mpr_outdir):
@@ -243,7 +263,9 @@ def main():
             'NA','Blocks','block','Z500','Blocks','block','Z500',maskname,'500',blocks_outfile_prefix)
 
 
+    ######################################################################
     # Plot Blocking Frequency
+    ######################################################################
     if ("PLOTBLOCKS" in steps_list_obs):
         if not ("CALCBLOCKS" in steps_list_obs):
             raise Exception('Must compute observed blocks before plotting them.')
